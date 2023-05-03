@@ -118,6 +118,19 @@ def get_bucket_info(s3_client, bucket_name=None, info_type="list"):
 def delete_bucket(s3_client, bucket_name):
     """"""
     try:
+        # Define objects list for deletion
+        objects = []
+        # Download objects list
+        contents = s3_client.list_objects(Bucket=bucket_name).get("Contents")
+        # Parse objects keys
+        for bucket_obj in contents:
+            objects.append({"Key": bucket_obj["Key"]})
+        # Deleting objects from s3 bucket
+        s3_client.delete_objects(Bucket=bucket_name, Delete={
+            "Objects": objects,
+            "Quiet": True
+        })
+        # Deleting s3 bucket
         s3_client.delete_bucket(Bucket=bucket_name)
     except ClientError as e:
         print(f"Deletion bucket error: {e}")
