@@ -41,6 +41,9 @@ def upload_file(s3_client, bucket_name, file_path, bucket_file_name=None):
     except ClientError as e:
         print(f"Upload file error: {e}")
         return False
+    except FileNotFoundError as e:
+        print(f"File not found error: {e}")
+        return False
     return True
 
 
@@ -62,6 +65,9 @@ def download_file(s3_client, bucket_name, bucket_file_name, file_path=None):
         s3_client.download_file(bucket_name, bucket_file_name, file_path)
     except ClientError as e:
         print(f"Download file error: {e}")
+        return False
+    except FileNotFoundError as e:
+        print(f"File not found error: {e}")
         return False
     return True
 
