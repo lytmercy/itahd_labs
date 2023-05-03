@@ -1,0 +1,7 @@
+boto3==1.26.124
+numpy==1.24.3
+pandas==2.0.1
+matplotlib==3.7.1
+requests==2.29.0
+attrdict3==2.0.2
+PyYAML==6.0
