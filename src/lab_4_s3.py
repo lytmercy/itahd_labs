@@ -4,14 +4,18 @@ from botocore.exceptions import ClientError
 import os
 
 # Import utils for load config
-from attrdict import AttrDict
 from src.utils import load_config
 
-CONFIG = AttrDict(load_config())
+CONFIG = load_config()
 
 
 def create_bucket(s3_client, bucket_name):
-    """"""
+    """
+    Create s3 bucket on AWS S3 server through boto3 client command;
+    :param s3_client: boto3 client connection with s3 service;
+    :param bucket_name: name of bucket for creation;
+    :return: True if the operation was successful, otherwise False.
+    """
     try:
         location = {"LocationConstraint": CONFIG.boto.region}
         s3_client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration=location)
@@ -25,8 +29,8 @@ def create_bucket(s3_client, bucket_name):
 def upload_file(s3_client, bucket_name, file_path, bucket_file_name=None):
     """
     Upload a file to on S3 bucket;
-    :param s3_client: client for manipulating with S3 Bucket;
-    :param bucket_name: Bucket to upload to;
+    :param s3_client: boto3 client connection with s3 service;
+    :param bucket_name: to which bucket upload to;
     :param file_path: file to upload;
     :param bucket_file_name: S3 object name (if not specified then file_name is used);
     :return: True if file was uploaded, else False.
@@ -50,8 +54,8 @@ def upload_file(s3_client, bucket_name, file_path, bucket_file_name=None):
 def download_file(s3_client, bucket_name, bucket_file_name, file_path=None):
     """
     Download a file from S3 bucket;
-    :param s3_client: client for manipulating with S3 Bucket;
-    :param bucket_name: Bucket download from;
+    :param s3_client: boto3 client connection with s3 service;
+    :param bucket_name: from which bucket download;
     :param bucket_file_name: S3 object name (if not specified then file_path is used);
     :param file_path: file path to download;
     :return: True if file was downloaded, else False.
@@ -73,7 +77,14 @@ def download_file(s3_client, bucket_name, bucket_file_name, file_path=None):
 
 
 def bucket_manipulation(s3_client, bucket_name, action=None, file_path=None, bucket_file=None):
-    """"""
+    """
+    Granting access to manipulation to s3 bucket;
+    :param s3_client: boto3 client connection with s3 service;
+    :param bucket_name: bucket name for manipulation;
+    :param action: which action needs to be done with s3 bucket;
+    :param file_path: file path for download|upload a file to|from s3 bucket;
+    :param bucket_file: file name for containing in s3 bucket;
+    """
     match action:
         case "upload": upload_file(s3_client, bucket_name, file_path, bucket_file)
         case "download": download_file(s3_client, bucket_name, bucket_file, file_path)
@@ -81,7 +92,10 @@ def bucket_manipulation(s3_client, bucket_name, action=None, file_path=None, buc
 
 
 def get_existing_buckets(s3_client):
-    """"""
+    """
+    Printing list of all existing s3 bucket on s3 server for your credentials;
+    :param s3_client: boto3 client connection with s3 service;
+    """
     response = s3_client.list_buckets()
 
     # Output the bucket names list
@@ -91,7 +105,11 @@ def get_existing_buckets(s3_client):
 
 
 def get_files_in_bucket(s3_client, bucket_name=None):
-    """"""
+    """
+    Printing list of all files in s3 bucket (with limits of 10 objects);
+    :param s3_client: boto3 client connection with s3 service;
+    :param bucket_name: bucket which will be checking;
+    """
     contents = []
     if bucket_name is None:
         print("Please enter bucket name!!")
@@ -108,7 +126,12 @@ def get_files_in_bucket(s3_client, bucket_name=None):
 
 
 def get_bucket_info(s3_client, bucket_name=None, info_type="list"):
-    """"""
+    """
+    Grant access to information about s3 buckets;
+    :param s3_client: boto3 client connection with s3 service;
+    :param bucket_name: bucket which will be checking for info;
+    :param info_type: information type which needs to show;
+    """
     match info_type:
         case "list": get_existing_buckets(s3_client)
         case "files": get_files_in_bucket(s3_client, bucket_name)
@@ -116,7 +139,12 @@ def get_bucket_info(s3_client, bucket_name=None, info_type="list"):
 
 
 def delete_bucket(s3_client, bucket_name):
-    """"""
+    """
+    Delete s3 bucket on AWS servers through boto3 client command;
+    :param s3_client: boto3 client connection with s3 service;
+    :param bucket_name: bucket which needs to be deleted;
+    :return: True if the operation was successful, otherwise False.
+    """
     try:
         # Define objects list for deletion
         objects = []

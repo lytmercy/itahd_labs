@@ -2,14 +2,16 @@ import boto3
 import os
 
 # Import utils for load config
-from attrdict import AttrDict
 from src.utils import load_config
 
-CONFIG = AttrDict(load_config())
+CONFIG = load_config()
 
 
 def create_pairs():
-    """"""
+    """
+    Creates key pair for secure connection with AWS services through SDK;
+    And saving the private key on the local machine.
+    """
     ec2_client = boto3.client("ec2", region_name=CONFIG.boto.region)
     key_pair = ec2_client.create_key_pair(KeyName=CONFIG.key_pairs.name)
 
@@ -19,8 +21,10 @@ def create_pairs():
 
 
 def delete_pairs():
-    """"""
+    """
+    Delete key pair for secure connection and delete private key on local machine;
+    """
     ec2_client = boto3.client("ec2", region_name=CONFIG.boto.region)
-    key_pair_response = ec2_client.delete_key_pair(KeyName=CONFIG.key_pairs.name)
+    ec2_client.delete_key_pair(KeyName=CONFIG.key_pairs.name)
 
     os.remove(CONFIG.key_pairs.path)
