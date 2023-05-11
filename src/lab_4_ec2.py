@@ -1,10 +1,42 @@
 # Importing libraries for interaction with AWS
 from botocore.exceptions import ClientError
+import random
 
 # Import utils for load config
 from src.utils import load_config
 
 CONFIG = load_config()
+
+
+def create_sec_group(ec2_client, sec_group_name="ITAHD_sec_group#std"):
+    """
+    Create Security Group for connect to EC2 instance;
+    :param ec2_client: boto3 client connection with ec2 service;
+    :param sec_group_name: determined security name;
+    :return: security group id and name;
+    """
+    try:
+        response = ec2_client.create_security_group(GroupName=sec_group_name,
+                                                    Description="Security Group for connect to EC2 instance.")
+        sec_group_id = response["GroupId"]
+        print("Security Group Created %s." % sec_group_name)
+
+        data = ec2_client.authorize_security_group_ingress(
+            GroupId=sec_group_id,
+            IpPermissions=[
+                {"IpProtocol": "tcp",
+                 "FromPort": 80,
+                 "ToPort": 80,
+                 "IpRanges": [{"CidrIp": "0.0.0.0/0"}]},
+                {"IpProtocol": "tcp",
+                 "FromPort": 22,
+                 "ToPort": 22,
+                 "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}
+            ])
+        print("Ingress Successfully Set")
+        return sec_group_id, sec_group_name
+    except ClientError as e:
+        print(f"Security Group Creation error: {e}")
 
 
 def create_instance(ec2_client):
@@ -19,6 +51,16 @@ def create_instance(ec2_client):
     key_name = CONFIG.key_pairs.name
     sec_group_ids = [CONFIG.boto.sec_group_id]
     sec_group_names = [CONFIG.boto.sec_group_name]
+    # Check if security group is exist
+    try:
+        ec2_client.describe_security_groups(GroupIds=sec_group_ids)
+    except ClientError as e:
+        print(f"Security Group '{sec_group_names[0]}' is not exist: {e}")
+        # Creating new security group
+        sec_group_id, sec_group_name = create_sec_group(ec2_client, CONFIG.boto.std_sec_group)
+        sec_group_ids = [sec_group_id]
+        sec_group_names = [sec_group_name]
+
     # Try creation
     try:
         instances = ec2_client.run_instances(
@@ -75,19 +117,36 @@ def get_instance_base_info(ec2_client, instance_id):
     base_info = {
         "instance_id": instance_id,
         "instance_type": None,
+        "cpu_arch": None,
+        "ram_size": None,
+        "disk_size": None,
         "public_ip": None,
         "instance_state": None
     }
+    ebs_vol_id = ""
 
     for reservation in reservations:
         for instance in reservation["Instances"]:
             base_info["instance_type"] = instance["InstanceType"]
             base_info["public_ip"] = instance["PublicIpAddress"]
+            ebs_vol_id = instance["BlockDeviceMappings"][0]["Ebs"]["VolumeId"]
             base_info["instance_state"] = instance["State"]["Name"]
+
+    # Get RAM and CPU Architecture information
+    instance_types = ec2_client.describe_instance_types(InstanceTypes=[base_info["instance_type"]]).get("InstanceTypes")
+    base_info["cpu_arch"] = instance_types[0]["ProcessorInfo"]["SupportedArchitectures"]
+    base_info["ram_size"] = instance_types[0]["MemoryInfo"]["SizeInMiB"]
+
+    # Get EBS storage size
+    ebs_volumes = ec2_client.describe_volumes(VolumeIds=[ebs_vol_id]).get("Volumes")
+    base_info["disk_size"] = ebs_volumes[0]["Size"]
 
     print(f"Instance info:")
     print(f"\t\tid:\t{base_info['instance_id']}")
     print(f"\t\ttype:\t{base_info['instance_type']}")
+    print(f"\t\tcpu arch:\t{base_info['cpu_arch']}")
+    print(f"\t\tram size:\t{base_info['ram_size']} MiB")
+    print(f"\t\tdisk size:\t{base_info['disk_size']} Gb")
     print(f"\t\tpublic ip:\t{base_info['public_ip']}")
     print(f"\t\tstate:\t{base_info['instance_state']}")
 
